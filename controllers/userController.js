@@ -5,12 +5,7 @@ module.exports = {
     async getUsers(req, res) {
         try {
             const users = await User.find();
-
-            const userObj = {
-                users
-            };
-
-            res.json(userObj);
+            res.json(users);
         } catch (err) {
             console.log(err);
             return res.status(500).json(err);
@@ -27,7 +22,7 @@ module.exports = {
                 return res.status(404).json({ message: 'No user with that ID' })
             }
 
-            res.json({ user });
+            res.json(user);
         } catch (err) {
             console.log(err);
             return res.status(500).json(err);
@@ -67,25 +62,14 @@ module.exports = {
     //delete a user
     async deleteUser(req, res) {
         try {
-            const user = await User.findOneAndRemove({ _id: req.params.userId });
+            const user = await User.findOneAndDelete({ _id: req.params.userId });
 
             if (!user) {
                 return res.status(404).json({ message: 'User does not exist' });
             }
 
-            const thought = await Thought.findOneAndUpdate(
-                { users: req.params.userId },
-                { $pull: { users: req.params.userId } },
-                { new: true }
-            );
-
-            if (!thought) {
-                return res.status(404).json({
-                    message: 'User deleted, no thoughts found',
-                });
-            }
-
-            res.json({ message: 'User successfully deleted' });
+            await Thought.deleteMany( {_id: { $in: user.thoughts } });
+            res.json({ message: 'User and their thoughts successfully deleted' });
         } catch (err) {
             console.log(err);
             res.status(500).json(err);
@@ -100,7 +84,7 @@ module.exports = {
         try {
             const user = await User.findOneAndUpdate(
                 { _id: req.params.userId },
-                { $addToSet: { friends: req.body } },
+                { $addToSet: { friends: req.params.friendId } },
                 { runValidators: true, new: true }
             );
 
@@ -121,14 +105,12 @@ module.exports = {
         try {
             const user = await User.findOneAndUpdate(
                 { _id: req.params.userId },
-                { $pull: { friend: { friendId: req.params.friendId } } },
+                { $pull: { friends: { friendId: req.params.friendId } } },
                 { runValidators: true, new: true }
             );
 
             if (!user) {
-                return res
-                    .status(404)
-                    .json({ message: 'No user with that ID' });
+                return res.status(404).json({ message: 'No user with that ID' });
             }
 
             res.json(user);
